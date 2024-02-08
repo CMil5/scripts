@@ -1,0 +1,58 @@
+#Phishing Email Purging Commands
+
+#Purpose: These commands can be used to locate and delete phishing emails across all mailboxes
+#Prerequisites
+#Account running commands must be a member of the Organization Management role within Compliance Center: https://learn.microsoft.com/en-us/microsoft-365/compliance/search-for-and-delete-messages-in-your-organization?view=o365-worldwide
+#Powershell must be connected to Compliance Center: https://learn.microsoft.com/en-us/powershell/exchange/connect-to-scc-powershell?view=exchange-ps
+
+##$EmailSubject.substring(0, [System.Math] ::Max(40, $EmailSubject.Length))##
+
+#####START#####
+
+Set-ExecutionPolicy RemoteSigned
+
+#NAME YOUR REPORT
+$ReportName = ""
+$EmailSubject = ""
+$SentDate = ""
+#mm/dd/yy
+
+
+###BUILDING AND RUNNING THE SEARCH###
+###These commands install the ExchangeOnlineManagement module, authenticate the account with Security and Compliance center, creates the email search report using the previously defined variables, and initiates the search.###
+
+Import-Module ExchangeOnlineManagement && Connect-IPPSSession -UserPrincipalName mw.admin@srcholdings.onmicrosoft.com && New-ComplianceSearch `
+-Name $ReportName `
+-ExchangeLocation All `
+-ContentMatchQuery "subject:$EmailSubject AND sent:$SentDate" && Start-complianceSearch -Identity $ReportName && Get-ComplianceSearch -Identity $ReportName
+
+
+
+
+###CHECKING REPORT STATUS###
+###The below command checks to see if the search still in progress or if it has completed.### 
+Get-ComplianceSearch -Identity $ReportName
+
+
+
+###The below commands show the number of hits found in the search for each mailbox and initiates a "preview" report.###
+Get-ComplianceSearch -Identity $ReportName | Format-List * && New-ComplianceSearchAction -SearchName $ReportName -Preview
+
+
+
+####The below command provides an output for the "preview" report.######
+(Get-ComplianceSearchAction ${ReportName}_Preview | Select-Object -ExpandProperty Results) -split "," | Out-File -FilePath c:\${ReportName}_Data
+
+
+
+### CREATE A PURGE JOB ###
+### This command places the emails in the deleted folder ###
+New-ComplianceSearchAction -SearchName $ReportName -Purge -PurgeType SoftDelete
+
+
+### VALIDATE PURGE JOB ###
+
+
+###END###
+
+

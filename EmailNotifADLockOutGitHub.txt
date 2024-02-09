@@ -1,0 +1,50 @@
+#CMil5 01/05/2024
+#This scripts primary purpose is to be implemented with task scheduler to send email alerts whenever a user account is locked out in AD, however, it could be used with any number of event IDs to be used with other alerts.
+
+Try
+{
+#Declare variable to be used for the Email
+$MailSubject= "Notice: User Account locked out"
+$MailFrom=""
+$MailTo=""
+
+#Gets the Event Log that contains the most recent lockout event
+$Event = Get-EventLog -LogName Security -InstanceId 4740 -Newest 1
+
+#Creates a variable which contains the contents of the lockout event log. This is used for the actual message in the email
+$MailBody= $Event.Message + "'r'n't" + $Event.TimeGenerated
+
+#Creates an SMTP Object and assigns an SMTP Address
+$SmtpClient = New-Object system.net.mail.smtpClient
+$SmtpClient.host = ""
+
+#Creates a new Mail Message Object. This is the object needed for the addressing email, subject, body, etc
+$MailMessage = New-Object system.net.mail.mailmessage
+$MailMessage.from = $MailFrom
+$MailMessage.To.add($MailTo)
+$MailMessage.IsBodyHtml = 0
+$MailMessage.Subject = $MailSubject
+$MailMessage.Body = $MailBody
+
+#Actually Sends the Message
+$SmtpClient.Send($MailMessage)
+}
+Catch
+{
+Write-Host "An error occurred"
+}
+Finally
+{
+  if ($SmtpClient -ne $null) {
+
+       $SmtpClient.Dispose() }
+
+  if ($MailMessage -ne $null) {
+
+       $MailMessage.Dispose() }
+
+  if ($Event -ne $null) {
+
+       $Event.Dispose() }
+Exit
+}
